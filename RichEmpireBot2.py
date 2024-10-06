@@ -4,7 +4,7 @@ import telebot
 import threading
 from telebot.types import ChatInviteLink
 from telethon import TelegramClient, events
-from telethon.tl.types import ChannelParticipantCreator
+from telethon.tl.types import ChannelParticipantCreator, MessageActionChatDeleteUser
 
 
 API_ID = os.getenv('API_ID')
@@ -67,17 +67,21 @@ async def send_message_to_user(user_id, message):
 
 @client.on(events.ChatAction(chats=GROUP_ID))
 async def handle_group_join(event):
-    print(f"\nhandle_group_join:\n{event}\n")
-    if event.user_joined or event.user_added:
+    # print(f"\nhandle_group_join:\n{event}\n")
+    if (event.user_joined or 
+        event.user_added) and not isinstance(event, 
+                                             MessageActionChatDeleteUser):
         user_id = event.user_id
         # print(f"\nUser joined the group: {user_id}\n")
         await send_message_to_user(int(user_id), "Thank you for joining our group!\n 100points transferred to your account!")
 
-
 @client.on(events.ChatAction(chats=CHANNEL_ID))
 async def handle_channel_join(event):
-    print(f"\nhandle_channel_join:\n{event}\n")
-    if (event.user_joined or event.user_added) and not isinstance(event.original_update.new_participant, ChannelParticipantCreator):
+    # print(f"\nhandle_channel_join:\n{event}\n")
+    if (event.user_joined or 
+        event.user_added) and not isinstance(event.original_update.new_participant, 
+                                             ChannelParticipantCreator) and not isinstance(event, 
+                                                                                           MessageActionChatDeleteUser):
         user_id = event.user_id
         # print(f"\nUser joined the channel: {user_id}\n")
         await send_message_to_user(int(user_id), "Thank you for joining our channel!\n 100points transferred to your account!")

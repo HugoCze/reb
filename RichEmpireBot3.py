@@ -4,7 +4,7 @@ import telebot
 import threading
 from telebot.types import ChatInviteLink
 from telethon import TelegramClient, events
-from telethon.tl.types import ChannelParticipantCreator
+from telethon.tl.types import ChannelParticipantCreator, MessageActionChatDeleteUser
 
 
 API_ID = os.getenv('API_ID')
@@ -65,22 +65,53 @@ async def send_message_to_user(user_id, message):
         print(f"Failed to send message to user {user_id}. Error: {e}")
 
 
-@client.on(events.ChatAction(chats=GROUP_ID))
-async def handle_group_join(event):
-    print(f"\nhandle_group_join:\n{event}\n")
-    if event.user_joined or event.user_added:
-        user_id = event.user_id
-        # print(f"\nUser joined the group: {user_id}\n")
-        await send_message_to_user(int(user_id), "Thank you for joining our group!\n 100points transferred to your account!")
+user_points = {}
 
 
 @client.on(events.ChatAction(chats=CHANNEL_ID))
 async def handle_channel_join(event):
-    print(f"\nhandle_channel_join:\n{event}\n")
-    if (event.user_joined or event.user_added) and not isinstance(event.original_update.new_participant, ChannelParticipantCreator):
-        user_id = event.user_id
-        # print(f"\nUser joined the channel: {user_id}\n")
-        await send_message_to_user(int(user_id), "Thank you for joining our channel!\n 100points transferred to your account!")
+    print(f"channel:\n{event}")
+    # print(f"event.user_left: {event.user_left}, event.user_kicked: {event.user_kicked}")
+
+    user_id = event.user_id
+    if (event.user_joined or 
+        event.user_added) and not isinstance(event.original_update.new_participant, 
+                                             ChannelParticipantCreator) and not isinstance(event, 
+                                                                                           MessageActionChatDeleteUser):
+        # User joined the channel
+        user_points[user_id] = user_points.get(user_id, 0) + 100
+        await send_message_to_user(int(user_id), 
+                        f"Thank you for joining our channel!\n100 points transferred to your account! Your total: {user_points[user_id]} points")
+    elif event.user_left == True or event.user_kicked == True:
+        # User left the channel
+        if user_id in user_points:
+            user_points[user_id] = max(0, user_points[user_id] - 100)  # Ensure points don't go below 0
+            await send_message_to_user(int(user_id), 
+                        f"Sorry to see you leave the channel.\n100 points deducted from your account. Your total: {user_points[user_id]} points")
+
+
+@client.on(events.ChatAction(chats=GROUP_ID))
+async def handle_group_join(event):
+
+    # print(f"event.user_left: {event.user_left}, event.user_kicked: {event.user_kicked}")
+    print(f"group:\n{event}")
+    user_id = event.user_id
+    if (event.user_joined or 
+        event.user_added) and not isinstance(event, 
+                                             MessageActionChatDeleteUser):
+
+        # User joined the group
+        user_points[user_id] = user_points.get(user_id, 0) + 100
+        await send_message_to_user(int(user_id), 
+                        f"Thank you for joining our group!\n100 points transferred to your account! Your total: {user_points[user_id]} points")
+    elif event.user_left == True or event.user_kicked == True:
+        # User left the group
+        if user_id in user_points:
+            user_points[user_id] = max(0, user_points[user_id] - 100)  # Ensure points don't go below 0
+            await send_message_to_user(int(user_id), 
+                        f"Sorry to see you leave the group.\n100 points deducted from your account. Your total: {user_points[user_id]} points")
+
+
 
 
 def bot_polling():
