@@ -66,7 +66,6 @@ async def send_message_to_user(user_id, message):
         print(f"Failed to send message to user {user_id}. Error: {e}")
 
 
-# SQLite setup
 def create_database():
     conn = sqlite3.connect('user_data.db')
     c = conn.cursor()
@@ -78,6 +77,7 @@ def create_database():
                   channel_member BOOLEAN DEFAULT FALSE)''')
     conn.commit()
     conn.close()
+
 
 def update_user_points(user_id, points_change, is_group=False, is_channel=False):
     conn = sqlite3.connect('user_data.db')
@@ -96,6 +96,17 @@ def update_user_points(user_id, points_change, is_group=False, is_channel=False)
     return current_points
 
 
+def check_membership(user_id, is_group=False, is_channel=False):
+    conn = sqlite3.connect('user_data.db')
+    c = conn.cursor()
+    if is_group:
+        result = c.execute("SELECT group_member FROM users WHERE id = ?", (user_id,)).fetchone()
+    elif is_channel:
+        result = c.execute("SELECT channel_member FROM users WHERE id = ?", (user_id,)).fetchone()
+    conn.close()
+    return result[0] if result else False
+
+
 @client.on(events.ChatAction(chats=CHANNEL_ID))
 async def handle_channel_join(event):
     print(f"channel:\n{event}")
@@ -106,10 +117,12 @@ async def handle_channel_join(event):
         await send_message_to_user(int(user_id), 
                         f"Thank you for joining our channel!\n100 points transferred to your account! Your total: {current_points} points")
     elif event.user_left == True or event.user_kicked == True:
-        # User left the channel
-        current_points = update_user_points(user_id, -100, is_channel=True)
-        await send_message_to_user(int(user_id), 
-                        f"Sorry to see you leave the channel.\n100 points deducted from your account. Your total: {current_points} points")
+        # Check if user was a member before updating points
+        if check_membership(user_id, is_channel=True):
+            current_points = update_user_points(user_id, -100, is_channel=True)
+            await send_message_to_user(int(user_id), 
+                            f"Sorry to see you leave the channel.\n100 points deducted from your account. Your total: {current_points} points")
+
 
 @client.on(events.ChatAction(chats=GROUP_ID))
 async def handle_group_join(event):
@@ -121,10 +134,12 @@ async def handle_group_join(event):
         await send_message_to_user(int(user_id), 
                         f"Thank you for joining our group!\n100 points transferred to your account! Your total: {current_points} points")
     elif event.user_left == True or event.user_kicked == True:
-        # User left the group
-        current_points = update_user_points(user_id, -100, is_group=True)
-        await send_message_to_user(int(user_id), 
-                        f"Sorry to see you leave the group.\n100 points deducted from your account. Your total: {current_points} points")
+        # Check if user was a member before updating points
+        if check_membership(user_id, is_group=True):
+            current_points = update_user_points(user_id, -100, is_group=True)
+            await send_message_to_user(int(user_id), 
+                            f"Sorry to see you leave the group.\n100 points deducted from your account. Your total: {current_points} points")
+
 
 def bot_polling():
     bot.polling(none_stop=True, interval=0)
