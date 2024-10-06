@@ -1,0 +1,5 @@
+.env
+.dockerignore
+old
+Gambiebot.txt
+env
