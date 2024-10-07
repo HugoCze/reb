@@ -6,3 +6,4 @@ env
 richEmpireKeys.pem
 bot_session.session
 notes.txt
+user_data.db
