@@ -120,7 +120,9 @@ async def handle_channel_join(event):
 async def handle_group_join(event):
     logger.info(f"Group event: {event}")
     user_id = event.user_id
-    if (event.user_joined or event.user_added) and not isinstance(event, MessageActionChatDeleteUser):
+    if (event.user_joined or 
+        event.user_added) and not isinstance(event.original_update.new_participant, 
+                                             ChannelParticipantCreator) and not isinstance(event, MessageActionChatDeleteUser):
         current_points = update_user_points(user_id, 100, is_group=True)
         await send_message_to_user(int(user_id), 
                         f"Thank you for joining our RichEmpireGroup!\n100 points transferred to your account! Your total: {current_points} points")
