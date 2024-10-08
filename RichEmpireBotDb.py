@@ -6,7 +6,6 @@ import sqlite3
 import logging
 import time
 from datetime import datetime
-from telebot.types import ChatInviteLink
 from telethon import TelegramClient, events
 from telethon.tl.types import ChannelParticipantCreator, MessageActionChatDeleteUser
 from requests.exceptions import ConnectionError, ReadTimeout
@@ -19,7 +18,7 @@ API_ID = os.getenv('API_ID')
 API_HASH = os.getenv('API_HASH')
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 CHANNEL_ID = os.getenv('CHANNEL_ID')
-GROUP_ID = int(os.getenv('GROUP_ID'))
+GROUP_ID = os.getenv('GROUP_ID')
 
 bot = telebot.TeleBot(BOT_TOKEN)
 client = TelegramClient('bot_session', API_ID, API_HASH)
@@ -30,17 +29,9 @@ def adapt_datetime(dt):
 
 sqlite3.register_adapter(datetime, adapt_datetime)
 
-def get_or_create_invite_link(chat_id: str) -> str:
-    try:
-        invite_link: ChatInviteLink = bot.create_chat_invite_link(chat_id)
-        return invite_link.invite_link
-    except Exception as e:
-        logger.error(f"Error creating invite link: {e}")
-        return "Unable to generate invite link at the moment."
-
 def get_tasks():
     return {
-        "task1": f"Join our RichEmpireGroup: https://t.me/+al-Q-WJfkXc5MGE0",
+        "task1": f"Join our RichEmpireGroup: @rich_empire3_group",
         "task2": f"Join our RichEmpireChannel: https://t.me/{CHANNEL_ID}"
     }
 
@@ -113,7 +104,9 @@ def check_membership(user_id, is_group=False, is_channel=False):
 async def handle_channel_join(event):
     logger.info(f"Channel event: {event}")
     user_id = event.user_id
-    if (event.user_joined or event.user_added) and not isinstance(event.original_update.new_participant, ChannelParticipantCreator) and not isinstance(event, MessageActionChatDeleteUser):
+    if (event.user_joined or 
+        event.user_added) and not isinstance(event.original_update.new_participant, 
+                                             ChannelParticipantCreator) and not isinstance(event, MessageActionChatDeleteUser):
         current_points = update_user_points(user_id, 100, is_channel=True)
         await send_message_to_user(int(user_id), 
                         f"Thank you for joining our channel!\n100 points transferred to your account! Your total: {current_points} points")
@@ -130,12 +123,12 @@ async def handle_group_join(event):
     if (event.user_joined or event.user_added) and not isinstance(event, MessageActionChatDeleteUser):
         current_points = update_user_points(user_id, 100, is_group=True)
         await send_message_to_user(int(user_id), 
-                        f"Thank you for joining our group!\n100 points transferred to your account! Your total: {current_points} points")
+                        f"Thank you for joining our RichEmpireGroup!\n100 points transferred to your account! Your total: {current_points} points")
     elif event.user_left == True or event.user_kicked == True:
         if check_membership(user_id, is_group=True):
             current_points = update_user_points(user_id, -100, is_group=True)
             await send_message_to_user(int(user_id), 
-                            f"Sorry to see you leave the group.\n100 points deducted from your account. Your total: {current_points} points")
+                            f"Sorry to see you leave the RichEmpireGroup.\n100 points deducted from your account. Your total: {current_points} points")
 
 def bot_polling():
     while True:
